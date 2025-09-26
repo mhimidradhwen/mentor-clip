@@ -1,0 +1,147 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://prisly.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =======================================================
+// UPDATED VIDEO NOTE MODEL (already has the supervisor)
+// =======================================================
+model VideoNote {
+  id      String @id @default(uuid())
+  content String // The actual text of the note/feedback
+
+  // Optional: Allows notes to be tied to a specific time in the video
+  timestampMs Int? // Time in milliseconds (e.g., 30500 for 30.5 seconds)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationship to Video
+  videoId String
+  video   Video  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  // Relationship to Supervisor (Assumes supervisors are users with role='professional')
+  // This is the field that links the note to the supervisor (User)
+  supervisorId String
+  // This is the relation definition, using the name "SupervisorNotes"
+  supervisor   User   @relation("SupervisorNotes", fields: [supervisorId], references: [id], onDelete: Restrict)
+
+  @@map("video_note")
+}
+
+// =======================================================
+// VIDEO MODEL
+// =======================================================
+model Video {
+  id          String  @id @default(uuid())
+  title       String // From the form data
+  description String? // From the form data
+
+  // The unique identifier for the file in S3, obtained from the presigned URL request
+  s3Key String @unique
+
+  // Metadata about the file
+  fileSize    Int // Stored in bytes
+  contentType String
+
+  // Relationships
+  userId   String
+  uploader User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // NEW RELATION FIELD: Video can have multiple notes
+  notes VideoNote[] // NEW RELATION FIELD
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("video")
+}
+
+// =======================================================
+// USER MODEL (already has the createdNotes relation)
+// =======================================================
+model User {
+  id             String    @id
+  name           String
+  email          String
+  emailVerified  Boolean   @default(false)
+  image          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @default(now()) @updatedAt
+  sessions       Session[]
+  accounts       Account[]
+  role           String    @default("student")
+  studentId      String?   @unique
+  professionalId String?   @unique
+  class          String?
+
+  // Relationship: User can have many Videos (as a student uploader)
+  uploadedVideos Video[]
+
+  // NEW RELATION FIELD: User can create many Notes (as a supervisor)
+  // This defines the opposite side of the "SupervisorNotes" relation
+  createdNotes VideoNote[] @relation("SupervisorNotes")
+
+  @@unique([email])
+  @@map("user")
+}
+
+// =======================================================
+// OTHER MODELS (No changes needed)
+// =======================================================
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  @@map("verification")
+}
