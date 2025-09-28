@@ -40,23 +40,29 @@ export default function LoginForm() {
         },
     });
 
+
     const onSubmit = async (values: FormValues) => {
         try {
             setLoading(true);
             const result = await signIn(values.email, values.password);
 
-            if (result?.error) { // Use optional chaining for safer access
-                // Add the error message to a specific field.
+            if (result?.error) {
+                // Handle server-side errors
                 form.setError("email", { message: result.error.message });
+            } else if (result?.redirectUrl) {
+                // 💥 FIX: Client-side redirect using the URL returned from the server
+                router.push(result.redirectUrl);
             } else {
-                router.push("/dashboard");
+                // Fallback redirect if redirectUrl is missing (shouldn't happen)
+                router.push("/login/success-handler");
             }
         } catch (err) {
             console.error(err);
-            // Set a generic error if something goes wrong.
             form.setError("email", { message: "Something went wrong." });
         } finally {
-            setLoading(false);
+            // NOTE: Keep loading true or false, but the redirect will likely
+            // happen before this resolves completely.
+            // setLoading(false);
         }
     };
 

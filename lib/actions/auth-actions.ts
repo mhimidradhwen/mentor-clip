@@ -8,6 +8,8 @@ type ActionResponse = {
     error?: {
         message: string;
     };
+    redirectUrl?: string;
+
 };
 
 export const signUp = async (email: string, password: string, name: string, role: 'student' | 'supervisor'): Promise<ActionResponse> => {
@@ -22,8 +24,9 @@ export const signUp = async (email: string, password: string, name: string, role
             },
         });
         // On success, return an empty object or a success flag
-        return {};
-    } catch (err: any) {
+        return {
+            redirectUrl: "/login/success-handler"
+        };    } catch (err: any) {
         // On error, return an object with an 'error' property
         console.error(err);
         return {
@@ -40,7 +43,7 @@ export const signIn = async (email: string, password: string): Promise<ActionRes
             body: {
                 email,
                 password,
-                callbackURL: "/dashboard"
+                callbackURL: "/login/success-handler"
             }
         });
         // On success, return an empty object

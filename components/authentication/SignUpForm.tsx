@@ -132,31 +132,6 @@ export default function SignUpForm() {
                             )}
                         />
 
-                        {/* Role */}
-                        <FormField
-                            control={form.control}
-                            name="role"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Role</FormLabel>
-                                    <FormControl>
-                                        <Select
-                                            onValueChange={field.onChange}
-                                            defaultValue={field.value}
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select a role" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="student">Student</SelectItem>
-                                                <SelectItem value="supervisor">Supervisor</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
 
                         {/* Submit */}
                         <Button type="submit" className="w-full" disabled={loading}>

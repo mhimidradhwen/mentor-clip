@@ -5,7 +5,7 @@
 import { getSessionData } from "@/lib/server-utils";
 import {ChatClient} from "@/components/stream/ChatClient"; // ✅ SAFE: Imports server-only logic here
 
-export default async function StudentMessagesPage() {
+export default async function AdminMessagesPage() {
     let initialData;
     try {
         // 1. Execute the server-only function

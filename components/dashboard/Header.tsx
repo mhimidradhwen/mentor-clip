@@ -1,6 +1,6 @@
 "use client"
 
-import { Bell, Search, Settings, User } from "lucide-react"
+import { Bell, Search, Settings, User, MessageCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -16,34 +16,73 @@ import { SidebarTrigger } from "@/components/ui/sidebar"
 import type { Session } from "@/lib/session"
 import { signOut } from "@/lib/actions/auth-actions"
 import { useRouter } from "next/navigation"
+import { useChatNotifications } from "@/hooks/useChatNotifications"
 
 interface HeaderProps {
     session: Session | null
+    // Add these props for chat notifications
+    streamApiKey?: string
+    streamUserToken?: string
 }
 
-export default function Header({ session }: HeaderProps) {
+export default function Header({ session, streamApiKey, streamUserToken }: HeaderProps) {
     const router = useRouter()
+
+    // Initialize chat notifications if user is logged in and Stream credentials are available
+    const { unreadCount, isConnected } = useChatNotifications({
+        userId: session?.user?.id || '',
+        userToken: streamUserToken || '',
+        apiKey: streamApiKey || '',
+        userName: session?.user?.name || '',
+        enabled: !!(session?.user?.id && streamUserToken && streamApiKey)
+    })
 
     const handleSignOut = async () => {
         await signOut()
         router.push("/") // redirect after logout
     }
 
+    const handleMessagesClick = () => {
+        router.push("/dashboard/supervisor/messages")
+    }
+
     return (
         <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex h-16 items-center justify-between px-4 gap-4">
-                 <SidebarTrigger />
-
+                <SidebarTrigger />
 
                 <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" className="relative">
-                        <Bell className="h-4 w-4" />
-                        <span className="absolute -top-1 -right-1 h-3 w-3 bg-destructive rounded-full text-[10px] font-medium text-destructive-foreground flex items-center justify-center">
-                            3
-                        </span>
-                        <span className="sr-only">Notifications</span>
-                    </Button>
-
+                    {/* Chat Messages Notification */}
+                    {session && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="relative"
+                            onClick={handleMessagesClick}
+                            title={unreadCount > 0 ? `${unreadCount} unread messages` : "Messages"}
+                        >
+                            <MessageCircle className="h-4 w-4" />
+                            {unreadCount > 0 && (
+                                <>
+                                    <span className="absolute -top-1 -right-1 h-5 w-5 bg-destructive rounded-full text-[10px] font-medium text-destructive-foreground flex items-center justify-center animate-pulse">
+                                        {unreadCount > 99 ? '99+' : unreadCount}
+                                    </span>
+                                    {/* Pulse animation ring */}
+                                    <span className="absolute -top-1 -right-1 h-5 w-5 bg-destructive rounded-full animate-ping opacity-75"></span>
+                                </>
+                            )}
+                            {/* Connection status indicator */}
+                            {session && streamApiKey && (
+                                <span
+                                    className={`absolute bottom-0 right-0 h-2 w-2 rounded-full ${
+                                        isConnected ? 'bg-green-500' : 'bg-gray-400'
+                                    }`}
+                                    title={isConnected ? 'Chat connected' : 'Chat disconnected'}
+                                />
+                            )}
+                            <span className="sr-only">Messages</span>
+                        </Button>
+                    )}
 
 
                     {session ? (
@@ -69,13 +108,14 @@ export default function Header({ session }: HeaderProps) {
                                     </div>
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem>
-                                    <User className="mr-2 h-4 w-4" />
-                                    <span>Profile</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                    <Settings className="mr-2 h-4 w-4" />
-                                    <span>Settings</span>
+                                <DropdownMenuItem onClick={handleMessagesClick}>
+                                    <MessageCircle className="mr-2 h-4 w-4" />
+                                    <span>Messages</span>
+                                    {unreadCount > 0 && (
+                                        <span className="ml-auto bg-destructive text-destructive-foreground text-xs px-1.5 py-0.5 rounded-full">
+                                            {unreadCount > 99 ? '99+' : unreadCount}
+                                        </span>
+                                    )}
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={handleSignOut}>Log out</DropdownMenuItem>
