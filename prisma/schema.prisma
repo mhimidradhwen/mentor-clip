@@ -15,11 +15,58 @@ datasource db {
 }
 
 // =======================================================
-// UPDATED VIDEO NOTE MODEL (already has the supervisor)
+// NEW CHALLENGE MODEL (Created by Admin/Professional)
+// =======================================================
+model Challenge {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  startDate   DateTime // When the challenge starts
+  endDate     DateTime // Submission deadline
+  isActive    Boolean  @default(true) // Whether students can currently submit
+
+  // Relationship to the admin/professional who created it
+  creatorId String
+  creator   User   @relation("CreatedChallenges", fields: [creatorId], references: [id], onDelete: Restrict)
+
+  // Submissions associated with this challenge
+  submissions VideoSubmission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("challenge")
+}
+
+// =======================================================
+// VIDEO SUBMISSION MODEL (Links Student Video to a Challenge)
+// =======================================================
+model VideoSubmission {
+  id      String  @id @default(uuid())
+  isFinal Boolean @default(false) // Flag if this is the final, graded submission
+
+  // Relationships
+  challengeId String
+  challenge   Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  videoId String @unique // Each submission must point to a unique video
+  video   Video  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  // Timestamps
+  submittedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([challengeId, videoId]) // A video can only be submitted once per challenge
+  @@map("video_submission")
+}
+
+// =======================================================
+// UPDATED VIDEO NOTE MODEL (now includes a score field)
 // =======================================================
 model VideoNote {
   id      String @id @default(uuid())
   content String // The actual text of the note/feedback
+  score   Int? // NEW: Score given by the supervisor (e.g., out of 100)
 
   // Optional: Allows notes to be tied to a specific time in the video
   timestampMs Int? // Time in milliseconds (e.g., 30500 for 30.5 seconds)
@@ -27,21 +74,19 @@ model VideoNote {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relationship to Video
+  // Relationship to Video (Unchanged from original structure)
   videoId String
   video   Video  @relation(fields: [videoId], references: [id], onDelete: Cascade)
 
-  // Relationship to Supervisor (Assumes supervisors are users with role='professional')
-  // This is the field that links the note to the supervisor (User)
+  // Relationship to Supervisor (Unchanged from original structure)
   supervisorId String
-  // This is the relation definition, using the name "SupervisorNotes"
   supervisor   User   @relation("SupervisorNotes", fields: [supervisorId], references: [id], onDelete: Restrict)
 
   @@map("video_note")
 }
 
 // =======================================================
-// VIDEO MODEL
+// VIDEO MODEL (Updated relation)
 // =======================================================
 model Video {
   id          String  @id @default(uuid())
@@ -59,8 +104,11 @@ model Video {
   userId   String
   uploader User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // NEW RELATION FIELD: Video can have multiple notes
-  notes VideoNote[] // NEW RELATION FIELD
+  // Video can have multiple notes
+  notes VideoNote[]
+
+  // NEW RELATION FIELD: Video can be part of a submission
+  submission VideoSubmission? // A video can only be one submission
 
   // Timestamps
   createdAt DateTime @default(now())
@@ -70,7 +118,7 @@ model Video {
 }
 
 // =======================================================
-// USER MODEL (already has the createdNotes relation)
+// USER MODEL (Updated relation)
 // =======================================================
 model User {
   id             String    @id
@@ -90,9 +138,11 @@ model User {
   // Relationship: User can have many Videos (as a student uploader)
   uploadedVideos Video[]
 
-  // NEW RELATION FIELD: User can create many Notes (as a supervisor)
-  // This defines the opposite side of the "SupervisorNotes" relation
+  // Relationship: User can create many Notes (as a supervisor)
   createdNotes VideoNote[] @relation("SupervisorNotes")
+
+  // NEW RELATION FIELD: User can create many Challenges (as an admin/professional)
+  createdChallenges Challenge[] @relation("CreatedChallenges")
 
   @@unique([email])
   @@map("user")
